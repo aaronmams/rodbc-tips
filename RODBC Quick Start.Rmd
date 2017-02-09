@@ -1,0 +1,67 @@
+---
+title: "RODBC Tips"
+author: "aaron mamula"
+date: "February 8, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Prerequisites
+
+1. Download/install the Oracle Client
+
+2. Relocate the file 'tnsname.ora' to the directory, "C:/app/username/product/11.2.0/client_1/network/admin"
+
+3. Set up a DSN
+
+### Setting Up the ODBC Connection
+
+Items 1 and 2 above are pretty straightforward.  Item 3 isn't trickey but does involve a few pointy-clicky steps.  [Here is a pretty good step-by-step resource for Windows users](https://kb.iu.edu/d/awqf)
+
+I'm guessing most of us will have to have our IT people do this...but in case you are not yet constrained in that way here's the gist:
+
+1. naviagate to: start->control panel->administrative tools->data sources (ODBC)
+2. click 'add'
+3. select the *Oracle in OraClient11g_home1* driver.
+4. fill in the text boxes and hopefully the **TNS Service Name** drop down autopopulates with **PACFIN**
+5. test connection
+
+![data source administrator](R:/AaronMamula/PacFIN_Oracle/rodbc-tips/images/DataSources1.png)
+
+
+![Add new DSN](R:/AaronMamula/PacFIN_Oracle/rodbc-tips/images/DataSources2.png)
+
+![Test Connection](R:/AaronMamula/PacFIN_Oracle/rodbc-tips/images/DataSources3.png)
+
+
+## Establish the PacFIN Connection in R
+
+### Install and load the RODBC package
+
+```{r}
+#install.packages('RODBC')
+library('RODBC')
+sessionInfo()
+```
+
+RODBC_1.3-13 is attached so we are ready to rock.
+
+### Connect to PacFIN
+
+```{r}
+#don't worry about this first part...I just need to get my PacFIN credentials in here without
+# making them visiabl
+pf.cred <- read.csv("pflogon.csv")
+
+channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
+sqlTables(channel,schema="PACFIN_MARTS")
+close(channel)
+
+```
+
+```{r}
+getwd()
+```
