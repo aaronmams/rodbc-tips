@@ -64,6 +64,9 @@ RODBC_1.3-13 is attached so we are ready to rock.
 # making them visiable
 pf.cred <- read.csv("pflogon.csv")
 
+#Identify ODBC connections
+odbcDataSources(type=c('all'))
+
 #get basic connection info:
 channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
 odbcGetInfo(channel)
@@ -94,10 +97,10 @@ Here, I'm going to pull IFQ Sablefish landings from the **COMPREHENSIVE_FT** tab
 #get total landings of IFQ sablefish and aggregate by year, major port area, and gear type
 
 channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
-sabl <- sqlQuery(channel,"select PACFIN_PORT_CODE,  PACFIN_YEAR, PACFIN_GROUP_GEAR_CODE, sum(LANDED_WEIGHT_LBS)
+sabl <- sqlQuery(channel,"select PACFIN_PORT_CODE,  LANDING_YEAR, PACFIN_GROUP_GEAR_CODE, sum(LANDED_WEIGHT_LBS)
                  from PACFIN_MARTS.COMPREHENSIVE_FT
                  where IS_IFQ_LANDING='T' and PACFIN_PORT_CODE in ('MRO','AVL','MNT','MOS','PRN','SF')
-                 group by PACFIN_PORT_CODE, PACFIN_YEAR, PACFIN_GROUP_GEAR_CODE")
+                 group by PACFIN_PORT_CODE, LANDING_YEAR, PACFIN_GROUP_GEAR_CODE")
 close(channel)
 
 sabl <- tbl_df(sabl)
@@ -122,6 +125,64 @@ ggplot(sabl.cc,
   theme_bw()
 
 ```
+
+
+A few quick comments:
+
+* *believeNRows=FALSE* I have no idea if/when this option is necessary to invoke.  Frankly, trial-and-error have convinced me it's better to include this than not to.  I have found that, without this option, my query will occassionally crap out around ~200,000 rows.  
+* the *sqlQuery* function used above has an option *max* which, if set to 0, indicates no limit on the number of rows to be imported.  My experience has been that this option has no been effective at addressing the problem mentioned in the previous bullet.
+
+
+### Alternative Sablefish IFQ Query
+
+Depending on your text editor/text options within R Studio you may find that R interprets line breaks within an SQL Query in a funky way.  My experience has been that *sqlQuery* is pretty resilient to formatting of the text string that you pass...but I have occassionally found that queries spanning multiple lines get passed with "/n" tags...when that happens I just use R's *paste* function to solve the problem:
+
+```{r}
+
+paste("select PACFIN_PORT_CODE,  LANDING_YEAR, PACFIN_GROUP_GEAR_CODE, sum(LANDED_WEIGHT_LBS)
+                 from PACFIN_MARTS.COMPREHENSIVE_FT
+      where IS_IFQ_LANDING='T' and PACFIN_PORT_CODE in ('MRO','AVL','MNT','MOS','PRN','SF')
+      group by PACFIN_PORT_CODE, LANDING_YEAR, PACFIN_GROUP_GEAR_CODE")
+
+#those "/n" tags could mess with thing...but we can write our query over multiple lines without the tags
+# like so:
+
+q <- paste("select PACFIN_PORT_CODE, LANDING_YEAR, PACFIN_GROUP_GEAR_CODE",",",
+           "sum(LANDED_WEIGHT_LBS)",
+           "from PACFIN_MARTS.COMPREHENSIVE_FT",
+           "where IS_IFQ_LANDING='T' and",
+           "PACFIN_PORT_CODE in ('MRO','AVL','MNT','MOS','PRN','SF')",
+           "group by PACFIN_PORT_CODE, LANDING_YEAR, PACFIN_GROUP_GEAR_CODE")
+
+q
+
+channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
+sabl.new <- sqlQuery(channel,q)
+close(channel)
+head(sabl.new)
+```
+
+### A Query with Dates
+
+The **COMPREHENSIVE_FT** table conveniently has dates decomposed into month and year...but if you wanted to access part of a table that does have decomposed dates and you wanted to filter by particular dates you can use Oracles *EXTRACT* function for date objects
+
+```{r}
+# A Query with dates...
+
+#the Oracle equivilent of 'DATEPART'
+channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
+sqlQuery(channel,"select count(FTID) from PACFIN_MARTS.COMPREHENSIVE_FT 
+where extract(year from LANDING_DATE) > 2015")
+close(channel)
+
+#The query above should be the same as this:
+channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
+sqlQuery(channel,"select count(FTID) from PACFIN_MARTS.COMPREHENSIVE_FT 
+         where LANDING_YEAR > 2015")
+close(channel)
+
+```
+
 
 ### Calculate Total Distance (Km) of Groundfish Trawl Trips
 
@@ -190,6 +251,7 @@ tows.tmp %>% mutate(all.good=ifelse(good_pos==townum,1,0)) %>% ungroup() %>% sum
 
 length(tows.tmp$good_pos[tows.tmp$good_pos==0])
 
+#Haversine distance between 2 sets of lat/long coordinates
 dtemp.fn <- function(x,y){
   p1 <- (x*pi)/180
   p2 <- (y*pi)/180
@@ -198,7 +260,6 @@ dtemp.fn <- function(x,y){
   d <- c*6371
   return(d)
 }
-
 
 
 #filter the data set to include only good tow set locations
