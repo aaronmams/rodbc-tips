@@ -25,6 +25,11 @@ pf.cred <- read.csv("pflogon.csv")
 #Identify ODBC connections
 odbcDataSources(type=c('all'))
 
+#check out what tables I can access
+channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
+sqlTables(channel,schema="AMAMULA")
+close(channel)
+
 #connect to PacFIN
 channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
 sqlTables(channel,schema="PACFIN_MARTS")
@@ -247,6 +252,67 @@ ggplot(plot.df,aes(x=trip.dist)) + geom_histogram(color='black',fill='blue',alph
 ########################################################################################
 ########################################################################################
 
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+# Creating tables
+
+channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
+sqlTables(channel,schema="AMAMULA")
+sqlQuery(channel, "CREATE TABLE comp_or_ifq AS
+         (SELECT pacfin_year ,landing_month ,pacfin_gear_code ,pacfin_gear_description ,ifq_management_area ,pacfin_species_code ,pacfin_species_common_name ,SUM(round_weight_mtons) AS rnd_mtons
+         FROM pacfin_marts.comprehensive_ft
+         WHERE pacfin_year = 2016
+         AND agency_code = 'O'
+         AND is_ifq_landing = 'T'
+         GROUP BY pacfin_year ,landing_month ,pacfin_gear_code ,pacfin_gear_description ,ifq_management_area ,pacfin_species_code ,pacfin_species_common_name);" )
+
+sqlTables(channel,schema="AMAMULA")
+
+comp_or_ifq <- sqlQuery(channel, "select * from AMAMULA.comp_or_ifq")
+head(comp_or_ifq)
+
+sqlQuery(channel, "DROP TABLE comp_or_ifq PURGE;")
+close(channel)
+
+
+#Create a View
+channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
+sqlTables(channel,schema="AMAMULA")
+sqlQuery(channel, "CREATE OR REPLACE VIEW comp_or_ifq_v AS
+         (SELECT pacfin_year ,landing_month ,pacfin_gear_code ,pacfin_gear_description ,ifq_management_area ,pacfin_species_code ,pacfin_species_common_name ,SUM(round_weight_mtons) AS rnd_mtons
+         FROM pacfin_marts.comprehensive_ft
+         WHERE pacfin_year = 2016
+         AND agency_code = 'O'
+         AND is_ifq_landing = 'T'
+         GROUP BY pacfin_year ,landing_month ,pacfin_gear_code ,pacfin_gear_description ,ifq_management_area ,pacfin_species_code ,pacfin_species_common_name);" )
+sqlTables(channel,schema="AMAMULA")
+
+
+sqlQuery(channel, "DROP VIEW comp_or_ifq_v;")
+sqlTables(channel,schema="AMAMULA")
+close(channel)
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
 
 
 ########################################################################################
@@ -289,6 +355,43 @@ Sys.time() - t
 ########################################################################################
 ########################################################################################
 ########################################################################################
+
+# A Mapping Example
+
+library(rgdal)
+library(rgeos)
+library(maptools)
+library(scales)
+library(dplyr)
+library(ggplot2)
+library(mapproj)
+
+ca.tract <- readOGR(dsn = "data", layer = "cb_2015_06_tract_500k")
+ca.tract <- fortify(ca.tract,region="AFFGEOID")
+
+ca.poverty <- read.csv("data/acs_poverty_family.csv")
+ca.poverty <- ca.poverty[,c('GEO.id','allfamilies_depchildren_pctpoverty')]
+names(ca.poverty) <- c('id','pct_poverty')
+
+plotData <- left_join(ca.tract,ca.poverty)
+
+#add county boundaries so the map doesn't get too busy
+ca.county <- readOGR(dsn="data",layer="gz_2010_06_060_00_500k")
+ca.county <- fortify(ca.county,region="COUNTY")
+
+#converty values to decimal format just to play nice with the distiller
+plotData$pct_poverty <- plotData$pct_poverty/100
+
+#now map it and make it look nicer
+ggplot() +
+  geom_polygon(data = plotData, aes(x = long, y = lat, group = group,
+                                    fill = pct_poverty)) +
+  geom_polygon(data = ca.county, aes(x = long, y = lat, group = group),
+               fill = NA, color = "black", size = 0.25) +
+  coord_map() +
+  scale_fill_distiller(palette = "Greens", labels = percent,
+                       breaks = pretty_breaks(n = 10)) +
+  guides(fill = guide_legend(reverse = TRUE)) + theme_bw()
 
 
 
