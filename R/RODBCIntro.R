@@ -26,7 +26,7 @@ pf.cred <- read.csv("pflogon.csv")
 odbcDataSources(type=c('all'))
 
 #connect to PacFIN
-channel<- odbcConnect(dsn="pacfin",uid='amamula',pw='mam2pac$',believeNRows=FALSE)
+channel<- odbcConnect(dsn="pacfin",uid=paste(pf.cred$UID),pw=paste(pf.cred$PW),believeNRows=FALSE)
 sqlTables(channel,schema="PACFIN_MARTS")
 close(channel)
 ###########################################################################################
