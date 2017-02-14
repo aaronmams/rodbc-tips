@@ -392,6 +392,20 @@ ggplot() +
   scale_fill_distiller(palette = "Greens", labels = percent,
                        breaks = pretty_breaks(n = 10)) +
   guides(fill = guide_legend(reverse = TRUE)) + theme_bw()
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
+############################################################################################
 
+#A couple new table Rob just sent...he said they are big so maybe don't try and run
+# these sections during the webinar
 
+#This is a flattened table of all the trawl logbook data sets that was originally developed for the NWFSC. Huge table..
+lgbk <- sqlQuery(channel, "select * from pacfin.lbk_codemb0310multiftiddelim where ryear = 2015;")
+
+#This is the comprehensive recreational catch estimates (i.e., RecFIN) that is under development. Almost completed
+rec2015 <- sqlQuery(channel, "select * from recfin_marts.comprehensive_rec_catch_est where recfin_year = 2015;")
 
