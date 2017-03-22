@@ -432,40 +432,40 @@ R has a couple libraries that play nice with shapefiles which make R a more powe
 * overlaid the County Boundaries instead of the Census Tract Boundaries just to make the map look nicer
 
 ```{r}
-library(rgdal)
-library(rgeos)
-library(maptools)
-library(scales)
-library(dplyr)
-library(ggplot2)
-library(mapproj)
+#library(rgdal)
+#library(rgeos)
+#library(maptools)
+#library(scales)
+#library(dplyr)
+#library(ggplot2)
+#library(mapproj)
 
-ca.tract <- readOGR(dsn = "data", layer = "cb_2015_06_tract_500k")
-ca.tract <- fortify(ca.tract,region="AFFGEOID")
+#ca.tract <- readOGR(dsn = "data", layer = "cb_2015_06_tract_500k")
+#ca.tract <- fortify(ca.tract,region="AFFGEOID")
 
-ca.poverty <- read.csv("data/acs_poverty_family.csv")
-ca.poverty <- ca.poverty[,c('GEO.id','allfamilies_depchildren_pctpoverty')]
-names(ca.poverty) <- c('id','pct_poverty')
+#ca.poverty <- read.csv("data/acs_poverty_family.csv")
+#ca.poverty <- ca.poverty[,c('GEO.id','allfamilies_depchildren_pctpoverty')]
+#names(ca.poverty) <- c('id','pct_poverty')
 
-plotData <- left_join(ca.tract,ca.poverty)
+#plotData <- left_join(ca.tract,ca.poverty)
 
 #add county boundaries so the map doesn't get too busy
-ca.county <- readOGR(dsn="data",layer="gz_2010_06_060_00_500k")
-ca.county <- fortify(ca.county,region="COUNTY")
+#ca.county <- readOGR(dsn="data",layer="gz_2010_06_060_00_500k")
+#ca.county <- fortify(ca.county,region="COUNTY")
 
 #converty values to decimal format just to play nice with the distiller
-plotData$pct_poverty <- plotData$pct_poverty/100
+#plotData$pct_poverty <- plotData$pct_poverty/100
 
 #now map it and make it look nicer
-ggplot() +
-  geom_polygon(data = plotData, aes(x = long, y = lat, group = group,
-                                    fill = pct_poverty)) +
-  geom_polygon(data = ca.county, aes(x = long, y = lat, group = group),
-               fill = NA, color = "black", size = 0.25) +
-  coord_map() +
-  scale_fill_distiller(palette = "Greens", labels = percent,
-                       breaks = pretty_breaks(n = 10)) +
-  guides(fill = guide_legend(reverse = TRUE)) + theme_bw()
+#ggplot() +
+#  geom_polygon(data = plotData, aes(x = long, y = lat, group = group,
+#                                    fill = pct_poverty)) +
+#  geom_polygon(data = ca.county, aes(x = long, y = lat, group = group),
+#               fill = NA, color = "black", size = 0.25) +
+#  coord_map() +
+#  scale_fill_distiller(palette = "Greens", labels = percent,
+#                       breaks = pretty_breaks(n = 10)) +
+#  guides(fill = guide_legend(reverse = TRUE)) + theme_bw()
 ```
 
 This isn't totally unrelated to PacFIN.  Some of you heard about an ongoing project with PacFIN to get community level economic and demographic data into a PacFIN database.  This will likely make it much easier for us to do community-level economic impact analysis because, rather than battle with the Census Bureau's datamart to get hundreds of data series saved as .csv files, we will be able to pull them from PacFIN.    
